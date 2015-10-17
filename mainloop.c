@@ -1,9 +1,6 @@
-
-
 static void logWarning(char *msg) {
   if(msg != NULL) printf("[%d] warning: %s\n", p2psecUptime(g_p2psec), msg);
 }
-
 
 static void connectInitpeers() {
   int i,j,k,l;
@@ -23,12 +20,12 @@ static void connectInitpeers() {
               printf("             done.\n");
             }
             else {
-              printf("             failed: connection could not be created.\n");
+              printf("Error: Unable to create connection.\n");
             }
           }
         }
         else {
-          printf("             failed: name could not be resolved.\n");
+          printf("peervpn: Name or service not known, could not connect to initpeers..\n");
         }
         k=0;
       }
@@ -43,7 +40,6 @@ static void connectInitpeers() {
     }
   }
 }
-
 
 static void mainLoop() {
   int fd;
@@ -190,13 +186,6 @@ static void mainLoop() {
         lastconnectcount = connectcount;
       }
     }
-    /*
-    if((tnow - laststatus) > 0) {
-      laststatus = tnow;
-      connectcount = p2psecPeerCount(g_p2psec);
-      printf("\ruptime: %d, peers connected: %d", p2psecUptime(g_p2psec), connectcount);
-    }
-    */
 
     if(((tnow - lastinit) > 30) && (!(mapGetKeyCount(&g_p2psec->mgt.map) > 1))) {
       lastinit = tnow;

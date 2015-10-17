@@ -16,6 +16,8 @@
 #include "pwd.c"
 #include "init.c"
 
+const char * version = "%%version%%";
+
 int main(int argc, char **argv) {
   int confok;
   int conffd;
@@ -81,8 +83,7 @@ int main(int argc, char **argv) {
     init(&config);
   }
   else {
-    printf("PeerVPN (Armin Mod)\n", argv[0]);
-    printf("usage: %s <configfile>\n", argv[0]);
+    printf("PeerVPN - Usage: %s <configfile>\n", argv[0]);
   }
 
   return 0;
