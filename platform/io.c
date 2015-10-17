@@ -2,26 +2,13 @@
 
 #ifndef F_IO_C
 #define F_IO_C
-
-
 #if defined(__FreeBSD__)
 #define IO_BSD
 #elif defined(__APPLE__)
 #define IO_BSD
-#elif defined(WIN32)
-#define IO_WINDOWS
-#ifdef WINVER
-#if WINVER < 0x0501
-#undef WINVER
-#endif
-#endif
-#ifndef WINVER
-#define WINVER 0x0501
-#endif
 #else
 #define IO_LINUX
 #endif
-
 
 #include <stdlib.h>
 #include <fcntl.h>
@@ -40,13 +27,6 @@
 #if defined(IO_LINUX)
 #include <linux/if_tun.h>
 #endif
-
-#if defined(IO_WINDOWS)
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <winioctl.h>
-#endif
-
 
 #define IO_TYPE_NULL 0
 #define IO_TYPE_SOCKET_V6 1
@@ -79,14 +59,6 @@ struct s_io_handle {
   int content_len;
   int type;
   int open;
-#if defined(IO_WINDOWS)
-  HANDLE fd_h;
-  int open_h;
-  OVERLAPPED ovlr;
-  int ovlr_used;
-  OVERLAPPED ovlw;
-  int ovlw_used;
-#endif
 };
 
 
@@ -183,16 +155,6 @@ static void ioResetID(struct s_io_state *iostate, const int id) {
   memset(&iostate->handle[id].source_addr, 0, sizeof(struct s_io_addr));
   memset(&iostate->handle[id].source_sockaddr, 0, sizeof(struct sockaddr_storage));
   memset(&iostate->mem[id * iostate->bufsize], 0, iostate->bufsize);
-#if defined(IO_WINDOWS)
-  memset(&iostate->handle[id].fd_h, 0, sizeof(HANDLE));
-  iostate->handle[id].open_h = 0;
-  memset(&iostate->handle[id].ovlr, 0, sizeof(OVERLAPPED));
-  iostate->handle[id].ovlr.hEvent = NULL;
-  iostate->handle[id].ovlr_used = 0;
-  memset(&iostate->handle[id].ovlw, 0, sizeof(OVERLAPPED));
-  iostate->handle[id].ovlw.hEvent = NULL;
-  iostate->handle[id].ovlw_used = 0;
-#endif
 }
 
 
@@ -202,10 +164,6 @@ static int ioAllocID(struct s_io_state *iostate) {
     for(i=0; i<iostate->max; i++) {
       if(!iostate->handle[i].enabled) {
         iostate->handle[i].enabled = 1;
-#if defined(IO_WINDOWS)
-        iostate->handle[i].ovlr.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-        iostate->handle[i].ovlw.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-#endif
         iostate->count++;
         return i;
       }
@@ -218,10 +176,6 @@ static int ioAllocID(struct s_io_state *iostate) {
 static void ioDeallocID(struct s_io_state *iostate, const int id) {
   if((iostate->count > 0) && (id >= 0) && (id < iostate->max)) {
     if(iostate->handle[id].enabled) {
-#if defined(IO_WINDOWS)
-      CloseHandle(iostate->handle[id].ovlr.hEvent);
-      CloseHandle(iostate->handle[id].ovlw.hEvent);
-#endif
       ioResetID(iostate, id);
       iostate->count--;
     }
@@ -236,12 +190,6 @@ static void ioClose(struct s_io_state *iostate, const int id) {
         close(iostate->handle[id].fd);
         iostate->handle[id].open = 0;
       }
-#if defined(IO_WINDOWS)
-      if(iostate->handle[id].open_h) {
-        CloseHandle(iostate->handle[id].fd_h);
-        iostate->handle[id].open_h = 0;
-      }
-#endif
     }
     ioDeallocID(iostate, id);
   }
@@ -286,14 +234,8 @@ static int ioOpenSocket(struct s_io_state *iostate, const int iotype, const char
     }
 #else
     close(fd);
-    return -1; // unsupported feature
+    return -1; // unsupported
 #endif
-  }
-
-#elif defined(IO_WINDOWS)
-
-  if((fd = WSASocket(domain, type, 0, 0, 0, WSA_FLAG_OVERLAPPED)) < 0) {
-    return -1;
   }
 
 #else

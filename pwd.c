@@ -1,37 +1,5 @@
-
-
-#ifdef WIN32
-  static void dropPrivileges(char *username, char *groupname, char *chrootdir) {
-    int error = 0;
-    if(strlen(username) > 0) {
-      error = 1;
-    }
-    if(strlen(groupname) > 0) {
-      error = 1;
-    }
-    if(strlen(chrootdir) > 0) {
-      error = 1;
-    }
-    if(error) {
-      throwError("user/group changing not implemented in windows version!\n");
-    }
-  }
-  static void dropPrivilegesAuto() {
-    HANDLE h_process;
-    HANDLE h_token;
-    h_process = GetCurrentProcess();
-    if(OpenProcessToken(h_process,TOKEN_WRITE,&h_token)) {
-      if(AdjustTokenPrivileges(h_token, TRUE, NULL, 0, NULL, NULL)) {
-      }
-      CloseHandle(h_token);
-    }
-  }
-#else
-
-
 #include <pwd.h>
 #include <grp.h>
-
 
 static void dropPrivileges(char *username, char *groupname, char *chrootdir) {
   struct passwd *pwd = NULL;
@@ -108,7 +76,4 @@ static void dropPrivilegesAuto() {
     
   }
 }
-
-
-#endif
 
