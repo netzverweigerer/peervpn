@@ -1,5 +1,3 @@
-
-
 struct s_initconfig {
   char sourceip[CONFPARSER_NAMEBUF_SIZE+1];
   char sourceport[CONFPARSER_NAMEBUF_SIZE+1];

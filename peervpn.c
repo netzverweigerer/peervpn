@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
     init(&config);
   }
   else {
+    printf("PeerVPN (Armin Mod)\n", argv[0]);
     printf("usage: %s <configfile>\n", argv[0]);
   }
 

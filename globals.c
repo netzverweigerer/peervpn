@@ -1,21 +1,10 @@
-
-
-#define PEERVPN_VERSION_MAJOR 0
-#define PEERVPN_VERSION_MINOR 43
-
-
 #define INITPEER_STORAGE 1024
-
-
 #define CONFPARSER_LINEBUF_SIZE 4096
 #define CONFPARSER_NAMEBUF_SIZE 512
-
-
 #define IOGRP_DEFAULT 0
 #define IOGRP_SOCKET 1
 #define IOGRP_TAP 2
 #define IOGRP_CONSOLE 3
-
 
 struct s_io_state iostate;
 P2PSEC_CTX *g_p2psec = NULL;

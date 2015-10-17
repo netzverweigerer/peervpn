@@ -1,6 +1,3 @@
-
-
-
 static void printActivePeerTable() {
   char str[32768];
   p2psecStatus(g_p2psec, str, 32768);
