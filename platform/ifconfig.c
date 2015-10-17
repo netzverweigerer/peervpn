@@ -13,8 +13,6 @@
 #define IFCONFIG_BSD
 #elif defined(__APPLE__)
 #define IFCONFIG_BSD
-#elif defined(WIN32)
-#define IFCONFIG_WINDOWS
 #else
 #define IFCONFIG_LINUX
 #endif
@@ -108,17 +106,7 @@ static int ifconfig4(const char *ifname, const int ifname_len, const char *addr,
   if(strlen(prefixlen_s) == 0) memcpy(prefixlen_s, "32", 2);
   ret = 0; sscanf(prefixlen_s, "%d", &ret); ifconfig4Netmask(netmask_s, ret);
   
-#if defined(IFCONFIG_WINDOWS)
-  sprintf(cmd, "netsh interface ipv4 set address \"%s\" static \"%s\" \"%s\" store=active", ifname_s, ip_s, netmask_s); ret = ifconfigExec(cmd);
-  if(ret == 0) {
-    return 1;
-  }
-  
-  sprintf(cmd, "netsh interface ip set address \"%s\" static \"%s\" \"%s\"", ifname_s, ip_s, netmask_s); ret = ifconfigExec(cmd);
-  if(ret == 0) {
-    return 1;
-  } 
-#elif defined(IFCONFIG_BSD)
+#if defined(IFCONFIG_BSD)
   sprintf(cmd, "ifconfig \"%s\" up", ifname_s); ret = ifconfigExec(cmd);
   if(ret == 0) {
     sprintf(cmd, "ifconfig \"%s\" inet \"%s/%s\"", ifname_s, ip_s, prefixlen_s); ret = ifconfigExec(cmd);
@@ -158,10 +146,7 @@ static int ifconfig6(const char *ifname, const int ifname_len, const char *addr,
   if(!ifconfigSplit(ip_s, 256, prefixlen_s, 4, addr, addr_len, '/')) return 0;
   if(strlen(prefixlen_s) == 0) memcpy(prefixlen_s, "128", 2);
 
-#if defined(IFCONFIG_WINDOWS)
-  sprintf(cmd, "netsh interface ipv6 set address \"%s\" \"%s/%s\" store=active", ifname_s, ip_s, prefixlen_s); ret = ifconfigExec(cmd);
-  return(ret == 0);
-#elif defined(IFCONFIG_BSD)
+#if defined(IFCONFIG_BSD)
   sprintf(cmd, "ifconfig \"%s\" up", ifname_s); ret = ifconfigExec(cmd);
   if(ret == 0) {
     sprintf(cmd, "ifconfig \"%s\" inet6 \"%s/%s\"", ifname_s, ip_s, prefixlen_s); ret = ifconfigExec(cmd);

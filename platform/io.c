@@ -607,39 +607,6 @@ static int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqn
 
   iostate->handle[id].open = 1;
 
-#elif defined(IO_WINDOWS)
-
-  char tmpname[256];
-  HANDLE handle;
-
-  memset(tmpname, 0, 256);
-  handle = ioOpenTAPWINHandle(tmpname, reqname, req_len);
-  if(handle == INVALID_HANDLE_VALUE) {
-    return -1;
-  }
-
-  if((id = ioAllocID(iostate)) < 0) {
-    CloseHandle(handle);
-    return -1;
-  }
-
-  if(tapname != NULL) {
-    name_len = ioStrlen(tmpname, 255);
-    tapname[0] = '\0';
-    if(name_len > 0 && name_len < 255) {
-      memcpy(tapname, tmpname, name_len);
-      tapname[name_len] = '\0';
-    }
-  }
-
-  iostate->handle[id].fd_h = handle;
-  iostate->handle[id].open_h = 1;
-
-#else
-
-  #error not implemented
-  return -1;
-
 #endif
 
   iostate->handle[id].fd = tapfd;
