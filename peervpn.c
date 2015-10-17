@@ -1,9 +1,6 @@
-
-
 #include <signal.h>
 #include <stdio.h>
 #include <openssl/engine.h>
-
 
 #include "ethernet/switch.c"
 #include "ethernet/ndp6.c"
@@ -18,7 +15,6 @@
 #include "config.c"
 #include "pwd.c"
 #include "init.c"
-
 
 int main(int argc, char **argv) {
   int confok;
