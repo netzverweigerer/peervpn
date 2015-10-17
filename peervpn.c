@@ -29,12 +29,12 @@
 #include "platform/io.c"
 #include "platform/ifconfig.c"
 #include "platform/seccomp.c"
-#include "globals.ic"
-#include "console.ic"
-#include "mainloop.ic"
-#include "config.ic"
-#include "pwd.ic"
-#include "init.ic"
+#include "globals.c"
+#include "console.c"
+#include "mainloop.c"
+#include "config.c"
+#include "pwd.c"
+#include "init.c"
 
 
 // commandline parser
