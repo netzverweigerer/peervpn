@@ -1,0 +1,213 @@
+#!/bin/bash
+
+# peerctl - control the PeerVPN tunnel daemons (does not require systemd)
+# written by Armin <armin@mutt.email>
+# Released under the terms of the GNU General Public License, v3+
+
+# path to your peervpn config files
+# NOTE: peervpn config files *need* to have a first line
+# that starts with "#!" and ends with "peervpn".
+configpath="$HOME/git/peervpn-configs/"
+
+# renice started daemons to this nice level
+renice="-5"
+
+# define color set
+color1=248
+color2=33
+color3=37
+color4=0
+
+# print a separator line
+line () {
+	tput setaf $color4
+	seq 1 $(tput cols) | while read line; do printf '—'; done
+	tput setaf $color1
+}
+
+# print header
+header () {
+	tput setaf "$color3"
+  echo -n "["
+	tput setaf "$color2"
+	echo -n "peerctl"
+	tput setaf "$color3"
+	echo -n "] "
+	tput setaf "$color1"
+}
+
+# print a message
+msg () {
+	tput setaf "$color1"
+	echo "$@  "
+	tput setaf 47
+}
+
+# show usage information
+usage () {
+  msg "Usage: peerctl [start|stop|list|kill|listconfigs|editconfig|help]"
+  exit 1
+}
+
+# exits un-equal zero after printing an error message
+bailout () {
+  msg "Error: $@"
+  exit 1
+}
+
+renice () {
+	pids=("$(pgrep peervpn)")
+	if [[ "${#pids[@]}" -gt 0 ]]; then
+		msg "Setting nice-level of peervpn processes ... "
+		line
+		for pid in "${pids[@]}"; do
+			tput setaf 32
+			echo -n -e "\nSetting scheduling priority for PID $pid ... "
+			sudo renice $renice $pid
+			echo "done."
+			tput setaf 178
+			line
+		done
+	fi
+}
+
+# starts a tunnel daemon
+start () {
+	args="$@"
+	b="$(echo "$args" | sed 's/ /_/g' | sed 's/\//_/g')"
+	c=$HOME/.peervpn.${b}.log
+	pids=("$(pgrep peervpn)")
+	for pid in "${pids[@]}"; do
+		n="$(ps auxwww | grep peervpn | grep "$pid" | grep -v grep | wc -l)"
+		if [[ "$n" -gt 0 ]]; then
+			bailout "Error: PeerVPN daemon for $args already running."
+		fi
+	done
+	if [[ -f $configpath/$args ]]; then
+		msg "Starting PeerVPN tunnel daemon: $args - Output will be logged to: $c"
+		sudo peervpn $configpath/"$args" >$c 2>&1 &
+		sleep 0.5
+		renice
+	else
+		msg "No PeerVPN configuration found for $args in $configpath - exiting... "
+		exit 1
+	fi
+}
+
+# stops a tunnel daemon
+stop () {
+	args="$@"
+	msg "Stopping PeerVPN daemon: $args ... "
+	pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
+	if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for $args - exiting... "; exit 1; fi
+	msg "[$pid]"
+	sudo kill $pid && exit 0
+	msg "Error: Could not kill PeerVPN daemon for network $args [PID: $pid]"; exit 1
+}
+
+# checks if a specified argument is actually a peervpn config file
+checkconfig () {
+	configok=1
+  c="$1"
+  n="$(head -n 1 "$c" | grep -E '^#!.*peervpn$' | wc -l)"
+  if [[ "$n" -eq 0 ]]; then msg "Warning: $c does not look like a PeerVPN configuration file."; configok=0; fi
+}
+
+# force-kills a peervpn daemon
+killdaemon () {
+	shift
+	a="$@"
+  msg "Killing PeerVPN daemon [$a] ... "
+	pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
+	msg "Found PID: $pid [$a]"
+	if [[ "$pid" == "" ]]; then bailout "No running PeerVPN daemon found for $args - exiting ... "; exit 1; fi
+	msg "Found Pid: [$pid]"
+	msg "Terminating PeerVPN process with PID $pid (SIGKILL) ... "
+	sudo kill -9 $pid
+	msg "Return code: $?"
+	exit 0
+
+}
+
+# lists peervpn tunnels
+list () {
+	pids=("$(pgrep peervpn)")
+	if [[ ! "${pids[*]}" -gt 0 ]]; then bailout "No PeerVPN instances running."; fi
+  msg "The following PeerVPN daemons are running: "
+	line
+	for pid in "${pids[@]}"; do
+		tput setaf 32
+		echo -e "\nPID: $pid "
+		tput setaf 178
+	  ps auxww | grep $pid | grep --color=always -i 'peervpn ' | grep -v grep | while read line; do echo "$line" | xargs | cut -d" " -f 8- | sed 's/\/\//\//g'; done
+	  line
+  done
+	exit 0
+}
+
+listconfigs () {
+	msg "PeerVPN configurations in $configpath: "
+	line
+	for i in $configpath/*; do
+		# TODO: use parameter expansion
+		j="$(echo "$i" | rev | cut -d"/" -f 1 | rev)"
+		n="$(grep -i '^networkname' $i | cut -d" " -f 2-)"
+		msg "$j [$n]"
+	done
+}
+
+# show header on startup
+header
+
+# argument parser
+case "$1" in
+  start)
+    f=$2
+    start "$f"
+    exit 0
+  ;;
+  stop)
+    f=$2
+    stop "$f"
+    exit 0
+  ;;
+  list)
+    list
+    exit 0
+  ;;
+  kill)
+    killdaemon "$@"
+    exit 0
+  ;;
+  listconfigs)
+    listconfigs
+    exit 0
+  ;;
+  editconfig)
+		shift
+		if [[ "$EDITOR" != "" ]]; then
+  		msg "Launching $EDITOR to edit PeerVPN configuration file $@"
+			sleep 1
+			$EDITOR "$configpath"/"$@"
+		else
+  		msg "\$EDITOR unset - Launching vi to edit PeerVPN configuration file $@"
+			sleep 1
+			vi "$configpath"/"$@"
+		fi
+		cd "$configpath"
+		if [[ -d ".git" ]]; then
+			msg "[git] Changes detected, auto-committing ... "
+  		git commit -a -m"Auto-committing changes: $@"
+		fi
+	;;
+  "")
+  	usage
+	;;
+   *)
+		msg "Error: $@: unknown option"
+    usage
+		exit 1
+  ;;
+esac
+
+

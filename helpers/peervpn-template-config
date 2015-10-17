@@ -1,0 +1,25 @@
+#!/usr/bin/env peervpn
+# vim: ft=config ts=2 sw=2 sts=2 et
+ 
+# general settings
+chroot /var/empty
+enableconsole no
+enabletunneling yes
+enablendpcache yes
+enablerelay no
+enableseccomp no
+forceseccomp no
+
+# network configuration
+networkname %%networkname%%
+psk %%psk%%
+
+# address configuration
+initpeers %%initpeers%%
+ifconfig4 %%ifconfig4%%
+ifconfig6 %%ifconfig6%%
+
+# upcmd - command executed after tap device has been brought up
+upcmd %%upcmd%%
+
+
