@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# exit on errors
+set -e
+
+# build filename
+d="$(date '+%Y%m%d%H%M%S')"
+fn=/tmp/${networkname}.peervpn.config.$d
+touch $fn
+
+# get a fresh template
+curl -s https://gist.githubusercontent.com/netzverweigerer/e53f81e9e5a01bf26a81/raw/9523f7fc112b12c2cf2ab3560783dd7daf4ecfc1/peervpn-template-config > /tmp/peervpn-template-config
+
+# ask for values
+kw=(networkname psk initpeers ifconfig4 ifconfig6 upcmd)
+for j in "${kw[@]}"; do echo -n "[$j] "; read $j; done
+echo
+echo "networkname $networkname"
+echo "psk $psk"
+echo "initpeers $initpeers"
+echo "ifconfig4 $ifconfig4"
+echo "ifconfig6 $ifconfig6"
+echo "upcmd $upcmd"
+echo
+
+# fill template
+cat /tmp/peervpn-template-config | sed "s/%%networkname%%/$networkname/g;s/%%psk%%/$psk/g;s/%%initpeers%%/$initpeers/g;s/%%ifconfig4%%/$ifconfig4/g;s/%%ifconfig6%%/$ifconfig6/g;s/%%upcmd%%/$upcmd/g" > $fn
+
+chmod +x $fn
+ls -al $fn
+
