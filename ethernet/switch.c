@@ -1,12 +1,9 @@
 
-
 #ifndef F_SWITCH_C
 #define F_SWITCH_C
 
-
 #include "../libp2psec/map.c"
 #include "../libp2psec/util.c"
-
 
 #define switch_FRAME_TYPE_INVALID 0
 #define switch_FRAME_TYPE_BROADCAST 1
@@ -16,14 +13,12 @@
 #define switch_MACMAP_SIZE 8192
 #define switch_TIMEOUT 86400
 
-
 #if switch_FRAME_MINSIZE < switch_MACADDR_SIZE + switch_MACADDR_SIZE
 #error switch_FRAME_MINSIZE too small
 #endif
 #if switch_MACADDR_SIZE != 6
 #error switch_MACADDR_SIZE is not 6
 #endif
-
 
 struct s_switch_mactable_entry {
   int portid;
@@ -33,7 +28,6 @@ struct s_switch_mactable_entry {
 struct s_switch_state {
   struct s_map mactable;
 };
-
 
 static int switchFrameOut(struct s_switch_state *switchstate, const unsigned char *frame, const int frame_len, int *portid, int *portts) {
   struct s_switch_mactable_entry *mapentry;
@@ -62,7 +56,6 @@ static int switchFrameOut(struct s_switch_state *switchstate, const unsigned cha
   }
 }
 
-
 static void switchFrameIn(struct s_switch_state *switchstate, const unsigned char *frame, const int frame_len, const int portid, const int portts) {
   struct s_switch_mactable_entry mapentry;
   const unsigned char *macaddr;
@@ -76,7 +69,6 @@ static void switchFrameIn(struct s_switch_state *switchstate, const unsigned cha
     }
   }
 }
-
 
 static void switchStatus(struct s_switch_state *switchstate, char *report, const int report_len) {
   int tnow = utilGetClock();
@@ -131,7 +123,6 @@ static void switchStatus(struct s_switch_state *switchstate, char *report, const
   report[pos++] = '\0';
 }
 
-
 static int switchCreate(struct s_switch_state *switchstate) {
   if(mapCreate(&switchstate->mactable, switch_MACMAP_SIZE, switch_MACADDR_SIZE, sizeof(struct s_switch_mactable_entry))) {
     mapEnableReplaceOld(&switchstate->mactable);
@@ -141,10 +132,8 @@ static int switchCreate(struct s_switch_state *switchstate) {
   return 0;
 }
 
-
 static void switchDestroy(struct s_switch_state *switchstate) {
   mapDestroy(&switchstate->mactable);
 }
-
 
 #endif // F_SWITCH_C
