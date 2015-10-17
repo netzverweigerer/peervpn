@@ -1,5 +1,4 @@
 
-
 #ifndef F_IO_C
 #define F_IO_C
 #if defined(__FreeBSD__)
@@ -313,191 +312,6 @@ static int ioOpenSocketV4(struct s_io_state *iostate, const char *bindaddress, c
   return ioOpenSocket(iostate, IO_TYPE_SOCKET_V4, bindaddress, bindport, AF_INET, SOCK_DGRAM, 0);
 }
 
-
-#if defined(IO_WINDOWS)
-#define IO_TAPWIN_IOCTL(request,method) CTL_CODE (FILE_DEVICE_UNKNOWN, request, method, FILE_ANY_ACCESS)
-#define IO_TAPWIN_IOCTL_SET_MEDIA_STATUS IO_TAPWIN_IOCTL(6, METHOD_BUFFERED)
-#define IO_TAPWIN_ADAPTER_KEY "SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
-#define IO_TAPWIN_NETWORK_CONNECTIONS_KEY "SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}"
-#define IO_TAPWIN_USERMODEDEVICEDIR "\\\\.\\Global\\"
-#define IO_TAPWIN_TAPSUFFIX ".tap"
-#define IO_TAPWIN_SEARCH_IF_GUID_FROM_NAME 0
-#define IO_TAPWIN_SEARCH_IF_NAME_FROM_GUID 1
-static char *ioOpenTAPWINSearch(char *value, char *key, int type) {
-  int i = 0;
-  LONG status;
-  DWORD len;
-  HKEY net_conn_key;
-  BOOL found = FALSE;
-  char guid[256];
-  char ifname[256];
-  char conn_string[512];
-  HKEY conn_key;
-  DWORD value_type;
-  if (!value || !key) {
-    return NULL;
-  }
-  status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, IO_TAPWIN_NETWORK_CONNECTIONS_KEY, 0, KEY_READ, &net_conn_key);
-  if (status != ERROR_SUCCESS) {
-    return NULL;
-  }
-  while (!found) {
-    len = sizeof(guid);
-    status = RegEnumKeyEx(net_conn_key, i++, guid, &len, NULL, NULL, NULL, NULL);
-    if(status == ERROR_NO_MORE_ITEMS) {
-      break;
-    }
-    else if(status != ERROR_SUCCESS) {
-      continue;
-    }
-    memset(conn_string, 0, 512);
-    memcpy(&conn_string[ioStrlen(conn_string, 511)], IO_TAPWIN_NETWORK_CONNECTIONS_KEY, strlen(IO_TAPWIN_NETWORK_CONNECTIONS_KEY));
-    memcpy(&conn_string[ioStrlen(conn_string, 511)], "\\", 1);
-    memcpy(&conn_string[ioStrlen(conn_string, 511)], guid, ioStrlen(guid, 255));
-    memcpy(&conn_string[ioStrlen(conn_string, 511)], "\\Connection", 11);
-    status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, conn_string, 0, KEY_READ, &conn_key);
-    if(status != ERROR_SUCCESS) {
-      continue;
-    }
-    len = sizeof(ifname);
-    status = RegQueryValueEx(conn_key, "Name", NULL, &value_type, (BYTE *)ifname, &len);
-    if(status != ERROR_SUCCESS || value_type != REG_SZ) {
-      RegCloseKey(conn_key);
-      continue;
-    }
-    switch (type) {
-    case IO_TAPWIN_SEARCH_IF_GUID_FROM_NAME:
-      if(!strcmp(key, ifname)) {
-        strcpy(value, guid);
-        found = TRUE;
-      }
-      break;
-    case IO_TAPWIN_SEARCH_IF_NAME_FROM_GUID:
-      if(!strcmp(key, guid)) {
-        strcpy(value, ifname);
-        found = TRUE;
-      }
-      break;
-    default:
-      break;
-    }
-    RegCloseKey(conn_key);
-  }
-  RegCloseKey(net_conn_key);
-  if(found) {
-    return value;
-  }
-  return NULL;
-}
-static HANDLE ioOpenTAPWINDev(char *guid, char *dev) {
-  HANDLE handle;
-  ULONG len, status;
-  char device_path[512];
-  memset(device_path, 0, 512);
-  memcpy(&device_path[ioStrlen(device_path, 511)], IO_TAPWIN_USERMODEDEVICEDIR, strlen(IO_TAPWIN_USERMODEDEVICEDIR));
-  memcpy(&device_path[ioStrlen(device_path, 511)], guid, ioStrlen(guid, 255));
-  memcpy(&device_path[ioStrlen(device_path, 511)], IO_TAPWIN_TAPSUFFIX, strlen(IO_TAPWIN_TAPSUFFIX));
-  handle = CreateFile(device_path, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, 0);
-  if (handle == INVALID_HANDLE_VALUE) {
-    return INVALID_HANDLE_VALUE;
-  }
-  status = TRUE;
-  if(!DeviceIoControl(handle, IO_TAPWIN_IOCTL_SET_MEDIA_STATUS, &status, sizeof(status), &status, sizeof(status), &len, NULL)) {
-    return INVALID_HANDLE_VALUE;
-  }
-  return handle;
-}
-static HANDLE ioOpenTAPWINHandle(char *tapname, const char *reqname, const int reqname_len) {
-  HANDLE handle = INVALID_HANDLE_VALUE;
-  HKEY unit_key;
-  char guid[256];
-  char comp_id[256];
-  char enum_name[256];
-  char unit_string[512];
-  char tmpname[256];
-  int tmpname_len;
-  BOOL found = FALSE;
-  HKEY adapter_key;
-  DWORD value_type;
-  LONG status;
-  DWORD len;
-  int i;
-  memset(tmpname, 0, 256);
-  if(reqname_len > 0) {
-    memcpy(tmpname, reqname, reqname_len);
-  }
-  tmpname_len = ioStrlen(tmpname, 255);
-  if(tmpname_len > 0) {
-    if(!(ioOpenTAPWINSearch(guid, tmpname, IO_TAPWIN_SEARCH_IF_GUID_FROM_NAME))) {
-      return INVALID_HANDLE_VALUE;
-    }
-    if((handle = (ioOpenTAPWINDev(guid, tmpname))) == INVALID_HANDLE_VALUE) {
-      return INVALID_HANDLE_VALUE;
-    }
-    if(tapname != NULL) {
-      memcpy(tapname, tmpname, tmpname_len);
-      tapname[tmpname_len] = '\0';
-    }
-    return handle;
-  }
-  status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, IO_TAPWIN_ADAPTER_KEY, 0, KEY_READ, &adapter_key);
-  if(status != ERROR_SUCCESS) {
-    return INVALID_HANDLE_VALUE;
-  }
-  i=0;
-  while(!found) {
-    len = sizeof(enum_name);
-    status = RegEnumKeyEx(adapter_key, i++, enum_name, &len, NULL, NULL, NULL, NULL);
-    if(status == ERROR_NO_MORE_ITEMS) {
-      break;
-    }
-    else if(status != ERROR_SUCCESS) {
-      continue;
-    }
-    memset(unit_string, 0, 512);
-    memcpy(&unit_string[ioStrlen(unit_string, 511)], IO_TAPWIN_ADAPTER_KEY, strlen(IO_TAPWIN_ADAPTER_KEY));
-    memcpy(&unit_string[ioStrlen(unit_string, 511)], "\\", 1);
-    memcpy(&unit_string[ioStrlen(unit_string, 511)], enum_name, ioStrlen(enum_name, 255));
-    status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, unit_string, 0, KEY_READ, &unit_key);
-    if(status != ERROR_SUCCESS) {
-      continue;
-    }
-    len = sizeof(comp_id);
-    status = RegQueryValueEx(unit_key, "ComponentId", NULL, &value_type, (BYTE *)comp_id, &len);
-    if(status != ERROR_SUCCESS || value_type != REG_SZ) {
-      RegCloseKey(unit_key);
-      continue;
-    }
-    len = sizeof(guid);
-    status = RegQueryValueEx(unit_key, "NetCfgInstanceId", NULL, &value_type, (BYTE *)guid, &len);
-    if(status != ERROR_SUCCESS || value_type != REG_SZ) {
-      RegCloseKey(unit_key);
-      continue;
-    }
-    ioOpenTAPWINSearch(tmpname, guid, IO_TAPWIN_SEARCH_IF_NAME_FROM_GUID);
-    handle = ioOpenTAPWINDev(guid, tmpname);
-    if(handle != INVALID_HANDLE_VALUE) {
-      found = TRUE;
-    }
-    RegCloseKey(unit_key);
-  }
-  RegCloseKey(adapter_key);
-  if(handle == INVALID_HANDLE_VALUE) {
-    return INVALID_HANDLE_VALUE;
-  }
-  if(tapname != NULL) {
-    tapname[0] = '\0';
-    tmpname_len = ioStrlen(tmpname, 255);
-    if(tmpname_len > 0) {
-      memcpy(tapname, tmpname, tmpname_len);
-      tapname[tmpname_len] = '\0';
-    }
-  }
-  return handle;
-}
-#endif
-
-
 static int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
   int id;
   int tapfd;
@@ -631,10 +445,6 @@ static int ioOpenSTDIN(struct s_io_state *iostate) {
   iostate->handle[id].fd = STDIN_FILENO;
   iostate->handle[id].type = IO_TYPE_FILE;
 
-#elif defined(IO_WINDOWS)
-
-  return -1;
-
 #else
 
   #error not implemented
@@ -650,34 +460,9 @@ static int ioHelperRecvFrom(struct s_io_handle *handle, unsigned char *recv_buf,
   int len;
 
 #if defined(IO_LINUX) || defined(IO_BSD)
-
   len = recvfrom(handle->fd, recv_buf, recv_buf_size, 0, source_sockaddr, source_sockaddr_len);
-
-#elif defined(IO_WINDOWS)
-
-  WSABUF wsabuf;
-  DWORD flags;
-
-  len = 0;
-  wsabuf.buf = (char *)recv_buf;
-  wsabuf.len = recv_buf_size;
-  flags = 0;
-  if(!(handle->ovlr_used)) {
-    if(WSARecvFrom(handle->fd, &wsabuf, 1, NULL, &flags, source_sockaddr, source_sockaddr_len, &handle->ovlr, NULL) == 0) {
-      handle->ovlr_used = 1;
-    }
-    else {
-      if(WSAGetLastError() == WSA_IO_PENDING) {
-        handle->ovlr_used = 1;
-      }
-    }
-  }
-
 #else
-
-  #error not implemented
   len = 0;
-
 #endif
 
   if(len > 0) {
@@ -687,40 +472,6 @@ static int ioHelperRecvFrom(struct s_io_handle *handle, unsigned char *recv_buf,
     return 0;
   }
 }
-
-
-#if defined(IO_WINDOWS)
-static int ioHelperFinishRecvFrom(struct s_io_handle *handle) {
-  DWORD len;
-  DWORD flags;
-
-  len = 0;
-  flags = 0;
-  if(handle->ovlr_used) {
-    if(WSAGetOverlappedResult(handle->fd, &handle->ovlr, &len, FALSE, &flags) == TRUE) {
-      handle->ovlr_used = 0;
-      ResetEvent(handle->ovlr.hEvent);
-      if(len > 0) {
-        handle->content_len = len;
-      }
-    }
-    else {
-      if(WSAGetLastError() != WSA_IO_INCOMPLETE) {
-        handle->ovlr_used = 0;
-        ResetEvent(handle->ovlr.hEvent);
-      }       
-    }
-  }
-
-  if(len > 0) {
-    return len;
-  }
-  else {
-    return 0;
-  }
-}
-#endif
-
 
 static int ioHelperSendTo(struct s_io_handle *handle, const unsigned char *send_buf, const int send_buf_size, const struct sockaddr *destination_sockaddr, const socklen_t destination_sockaddr_len) {
   int len;
@@ -729,36 +480,8 @@ static int ioHelperSendTo(struct s_io_handle *handle, const unsigned char *send_
 
   len = sendto(handle->fd, send_buf, send_buf_size, 0, destination_sockaddr, destination_sockaddr_len);
 
-#elif defined(IO_WINDOWS)
-
-  int ovlw_used;
-  WSABUF wsabuf;
-  DWORD flags;
-  DWORD dwlen;
-
-  len = 0;
-  wsabuf.buf = (char *)send_buf;
-  wsabuf.len = send_buf_size;
-  flags = 0;
-  ovlw_used = 0;
-  if(WSASendTo(handle->fd, &wsabuf, 1, NULL, flags, destination_sockaddr, destination_sockaddr_len, &handle->ovlw, NULL) == 0) {
-    ovlw_used = 1;
-  }
-  else {
-    if(WSAGetLastError() == WSA_IO_PENDING) {
-      ovlw_used = 1;
-    }
-  }
-  if(ovlw_used) {
-    if(WSAGetOverlappedResult(handle->fd, &handle->ovlw, &dwlen, TRUE, &flags) == TRUE) { 
-      len = dwlen;
-    }
-    ResetEvent(handle->ovlw.hEvent);
-  }
-
 #else
 
-  #error not implemented
   len = 0;
 
 #endif
@@ -774,32 +497,7 @@ static int ioHelperSendTo(struct s_io_handle *handle, const unsigned char *send_
 
 static int ioHelperReadFile(struct s_io_handle *handle, unsigned char *read_buf, const int read_buf_size) {
   int len;
-
-#if defined(IO_LINUX) || defined(IO_BSD)
-
-  len = read(handle->fd, read_buf, read_buf_size);
-
-#elif defined(IO_WINDOWS)
-
-  len = 0;
-  if(!(handle->ovlr_used)) {
-    if(ReadFile(handle->fd_h, read_buf, read_buf_size, NULL, &handle->ovlr) == TRUE) {
-      handle->ovlr_used = 1;
-    }
-    else {
-      if(GetLastError() == ERROR_IO_PENDING) {
-        handle->ovlr_used = 1;
-      }
-    }
-  }
-
-#else
-
-  #error not implemented
-  len = 0;
-
-#endif
-
+	len = read(handle->fd, read_buf, read_buf_size);
   if(len > 0) {
     return len;
   }
@@ -807,75 +505,11 @@ static int ioHelperReadFile(struct s_io_handle *handle, unsigned char *read_buf,
     return 0;
   }
 }
-
-
-#if defined(IO_WINDOWS)
-static int ioHelperFinishReadFile(struct s_io_handle *handle) {
-  DWORD len;
-
-  len = 0;
-  if(handle->ovlr_used) {
-    if(GetOverlappedResult(handle->fd_h, &handle->ovlr, &len, FALSE) == TRUE) {
-      handle->ovlr_used = 0;
-      ResetEvent(handle->ovlr.hEvent);
-      if(len > 0) {
-        handle->content_len = len;
-      }
-    }
-    else {
-      if(GetLastError() != ERROR_IO_INCOMPLETE) {
-        handle->ovlr_used = 0;
-        ResetEvent(handle->ovlr.hEvent);
-      }
-    }
-  }
-
-  if(len > 0) {
-    return len;
-  }
-  else {
-    return 0;
-  }
-}
-#endif
 
 
 static int ioHelperWriteFile(struct s_io_handle *handle, const unsigned char *write_buf, const int write_buf_size) {
   int len;
-
-#if defined(IO_LINUX) || defined(IO_BSD)
-
-  len = write(handle->fd, write_buf, write_buf_size);
-
-#elif defined(IO_WINDOWS)
-
-  int ovlw_used;
-  DWORD dwlen;
-
-  len = 0;
-  ovlw_used = 0;
-  if(WriteFile(handle->fd_h, write_buf, write_buf_size, NULL, &handle->ovlw) == TRUE) {
-    ovlw_used = 1;
-  }
-  else {
-    if(GetLastError() == ERROR_IO_PENDING) {
-      ovlw_used = 1;
-    }
-  }
-  if(ovlw_used) {
-    if(GetOverlappedResult(handle->fd_h, &handle->ovlw, &dwlen, TRUE) == TRUE) {
-      len = dwlen;
-    }
-    ResetEvent(handle->ovlw.hEvent);
-  }
-
-#else
-
-  #error not implemented
-  len = 0;
-
-#endif
-
+	len = write(handle->fd, write_buf, write_buf_size);
   if(len > 0) {
     return len;
   }
@@ -883,7 +517,6 @@ static int ioHelperWriteFile(struct s_io_handle *handle, const unsigned char *wr
     return 0;
   }
 }
-
 
 static void ioPreRead(struct s_io_state *iostate, const int id) {
   int ret;
@@ -910,35 +543,7 @@ static void ioPreRead(struct s_io_state *iostate, const int id) {
 
 static int ioRead(struct s_io_state *iostate, const int id) {
   int ret;
-
-#if defined(IO_LINUX) || defined(IO_BSD)
-
   ret = iostate->handle[id].content_len;
-
-#elif defined(IO_WINDOWS)
-
-  switch(iostate->handle[id].type) {
-    case IO_TYPE_SOCKET_V6:
-      ret = ioHelperFinishRecvFrom(&iostate->handle[id]);
-      break;
-    case IO_TYPE_SOCKET_V4:
-      ret = ioHelperFinishRecvFrom(&iostate->handle[id]);
-      break;
-    case IO_TYPE_FILE:
-      ret = ioHelperFinishReadFile(&iostate->handle[id]);
-      break;
-    default:
-      ret = 0;
-      break;
-  }
-
-#else
-
-  #error not implemented
-  ret = 0;
-
-#endif
-
   return ret;
 }
 
@@ -946,8 +551,6 @@ static int ioRead(struct s_io_state *iostate, const int id) {
 static int ioReadAll(struct s_io_state *iostate) {
   int ret;
   int i;
-
-#if defined(IO_LINUX) || defined(IO_BSD)
 
   fd_set fdset;
   struct timeval seltimeout;
@@ -958,6 +561,7 @@ static int ioReadAll(struct s_io_state *iostate) {
 
   fdh = 0;
   FD_ZERO(&fdset);
+
   for(i=0; i<iostate->max; i++) {
     if(iostate->handle[i].enabled) {
       fd = iostate->handle[i].fd;
@@ -969,6 +573,7 @@ static int ioReadAll(struct s_io_state *iostate) {
   }
 
   ret = 0;
+
   if(!(fdh < 0)) {
     if(select(fdh, &fdset, NULL, NULL, &seltimeout) > 0) {
       for(i=0; i<iostate->max; i++) {
@@ -983,43 +588,6 @@ static int ioReadAll(struct s_io_state *iostate) {
       }
     }
   }
-
-#elif defined(IO_WINDOWS)
-
-  HANDLE events[iostate->max];
-  int fdc;
-
-  fdc = 0;
-  for(i=0; i<iostate->max; i++) {
-    if(iostate->handle[i].enabled) {
-      ioPreRead(iostate, i);
-      if(iostate->handle[i].ovlr_used) {
-        events[fdc] = iostate->handle[i].ovlr.hEvent;
-        fdc++;
-      }
-    }
-  }
-
-  ret = 0;
-  if(fdc > 0) {
-    WaitForMultipleObjects(fdc, events, FALSE, (iostate->timeout * 1000));
-    for(i=0; i<iostate->max; i++) {
-      if(ioRead(iostate, i) > 0) {
-        ret++;
-      }
-    }
-  }
-  else {
-    Sleep(iostate->timeout * 1000);
-  }
-
-#else
-
-  #error not implemented
-  ret = 0;
-
-#endif
-
   return ret;
 }
 
@@ -1221,11 +789,6 @@ static void ioReset(struct s_io_state *iostate) {
 
 
 static int ioCreate(struct s_io_state *iostate, const int io_bufsize, const int io_max) {
-#ifdef IO_WINDOWS
-  WSADATA wsadata;
-  if(WSAStartup(MAKEWORD(2,2), &wsadata) != 0) { return 0; }
-#endif
-
   if((io_bufsize > 0) && (io_max > 0)) { // check parameters
     if((iostate->mem = (malloc(io_bufsize * io_max))) != NULL) {
       if((iostate->handle = (malloc(sizeof(struct s_io_handle) * io_max))) != NULL) {
@@ -1251,11 +814,6 @@ static void ioDestroy(struct s_io_state *iostate) {
   iostate->bufsize = 0;
   iostate->max = 0;
   iostate->count = 0;
-
-#ifdef IO_WINDOWS
-  WSACleanup();
-#endif
 }
-
 
 #endif // F_IO_C 
