@@ -55,9 +55,6 @@ int main(int argc, char **argv) {
   config.sockmark = 0;
 
   setbuf(stdout,NULL);
-  printf("PeerVPN v%d.%03d\n", PEERVPN_VERSION_MAJOR, PEERVPN_VERSION_MINOR);
-  printf("(c)2015 Tobias Volk <mail@tobiasvolk.de>\n");
-  printf("\n");
 
   confok = 0;
   if(argc == 2) {
