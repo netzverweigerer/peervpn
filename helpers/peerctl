@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # peerctl - control the PeerVPN tunnel daemons (does not require systemd)
-# written by Armin <armin@mutt.email>
+# written by Armin Jenewein <armin@mutt.email>
 # Released under the terms of the GNU General Public License, v3+
 
 # path to your peervpn config files
@@ -97,7 +97,8 @@ start () {
 # stops a tunnel daemon
 stop () {
 	args="$@"
-	msg "Stopping PeerVPN daemon: $args ... "
+	if [[ "$args" == "" ]]; then echo "Error: argument required for subcommand \"stop\"."; exit 1; fi
+	msg "Stopping PeerVPN daemon [$args] ... "
 	pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
 	if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for $args - exiting... "; exit 1; fi
 	msg "[$pid]"

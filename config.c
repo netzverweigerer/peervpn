@@ -350,3 +350,4 @@ static void parseConfigFile(int fd, struct s_initconfig *cs) {
   }
   while(readlen > 0);
 }
+

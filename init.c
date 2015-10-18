@@ -1,5 +1,3 @@
-
-
 void sighandler(int sig) {
   g_mainloop = 0;
 }
