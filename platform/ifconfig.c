@@ -1,13 +1,9 @@
-
-
 #ifndef F_IFCONFIG_C
 #define F_IFCONFIG_C
-
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
 
 #if defined(__FreeBSD__)
 #define IFCONFIG_BSD
@@ -17,7 +13,6 @@
 #define IFCONFIG_LINUX
 #endif
 
-
 static int ifconfigExec(const char *cmd) {
   int ret = system(cmd);
 #ifdef IFCONFIG_DEBUG
@@ -25,7 +20,6 @@ static int ifconfigExec(const char *cmd) {
 #endif
   return ret;
 }
-
 
 static int ifconfigCheckCopyInput(char *out, const int out_len, const char *in, const int in_len) {
   int i;
@@ -51,7 +45,6 @@ static int ifconfigCheckCopyInput(char *out, const int out_len, const char *in, 
   return 1;
 }
 
-
 static int ifconfigSplit(char *a_out, const int a_len, char *b_out, const int b_len, const char *in, const int in_len, const char split_char) {
   int i;
   int s;
@@ -70,7 +63,6 @@ static int ifconfigSplit(char *a_out, const int a_len, char *b_out, const int b_
   if(!ifconfigCheckCopyInput(b_out, b_len, &in[(s + 1)], (in_len - (s + 1)))) return 0;
   return 1;
 }
-
 
 static void ifconfig4Netmask(char *out, const int prefixlen) {
   int mask[4];
@@ -92,7 +84,6 @@ static void ifconfig4Netmask(char *out, const int prefixlen) {
   snprintf(out, 16, "%d.%d.%d.%d", mask[0], mask[1], mask[2], mask[3]);
 }
 
-
 static int ifconfig4(const char *ifname, const int ifname_len, const char *addr, const int addr_len) {
   char cmd[1024]; memset(cmd, 0, 1024);
   char ifname_s[256]; memset(ifname_s, 0, 256);
@@ -100,12 +91,10 @@ static int ifconfig4(const char *ifname, const int ifname_len, const char *addr,
   char netmask_s[16]; memset(netmask_s, 0, 16);
   char prefixlen_s[4]; memset(prefixlen_s, 0, 4);
   int ret;
-  
   if(!ifconfigCheckCopyInput(ifname_s, 256, ifname, ifname_len)) return 0;
   if(!ifconfigSplit(ip_s, 256, prefixlen_s, 4, addr, addr_len, '/')) return 0;
   if(strlen(prefixlen_s) == 0) memcpy(prefixlen_s, "32", 2);
   ret = 0; sscanf(prefixlen_s, "%d", &ret); ifconfig4Netmask(netmask_s, ret);
-  
 #if defined(IFCONFIG_BSD)
   sprintf(cmd, "ifconfig \"%s\" up", ifname_s); ret = ifconfigExec(cmd);
   if(ret == 0) {
@@ -122,7 +111,6 @@ static int ifconfig4(const char *ifname, const int ifname_len, const char *addr,
     if(ret != 0) { return 0; }
     return 1;
   }
-  
   sprintf(cmd, "ifconfig \"%s\" up", ifname_s); ret = ifconfigExec(cmd);
   if(ret == 0) {
     sprintf(cmd, "ifconfig \"%s\" \"%s\" netmask \"%s\"", ifname_s, ip_s, netmask_s); ret = ifconfigExec(cmd);
@@ -130,10 +118,8 @@ static int ifconfig4(const char *ifname, const int ifname_len, const char *addr,
     return 1;
   }
 #endif
-  
   return 0;
 }
-
 
 static int ifconfig6(const char *ifname, const int ifname_len, const char *addr, const int addr_len) {
   char cmd[1024]; memset(cmd, 0, 1024);
@@ -141,11 +127,9 @@ static int ifconfig6(const char *ifname, const int ifname_len, const char *addr,
   char ip_s[256]; memset(ip_s, 0, 256);
   char prefixlen_s[4]; memset(prefixlen_s, 0, 4);
   int ret;
-  
   if(!ifconfigCheckCopyInput(ifname_s, 256, ifname, ifname_len)) return 0;
   if(!ifconfigSplit(ip_s, 256, prefixlen_s, 4, addr, addr_len, '/')) return 0;
   if(strlen(prefixlen_s) == 0) memcpy(prefixlen_s, "128", 2);
-
 #if defined(IFCONFIG_BSD)
   sprintf(cmd, "ifconfig \"%s\" up", ifname_s); ret = ifconfigExec(cmd);
   if(ret == 0) {
@@ -163,9 +147,6 @@ static int ifconfig6(const char *ifname, const int ifname_len, const char *addr,
     return 1;
   }
 #endif
-
   return 0;
 }
-
-
 #endif // F_IFCONFIG_C 
