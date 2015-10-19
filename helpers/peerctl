@@ -1,13 +1,20 @@
 #!/bin/bash
-
 # peerctl - control the PeerVPN tunnel daemons (does not require systemd)
 # written by Armin Jenewein <armin@mutt.email>
 # Released under the terms of the GNU General Public License, v3+
+# 
+# NOTE: peervpn config files *need* to have a first line
+# that starts with "#!" and ends with "peervpn". This has no side-effects
+# apart from the fact that your configuration file will get self-executable
+# if proper permissions are set.
+
+# TODO: re-implement auto-git-commit for changed configuration files
 
 # path to your peervpn config files
-# NOTE: peervpn config files *need* to have a first line
-# that starts with "#!" and ends with "peervpn".
-configpath="$HOME/git/peervpn-configs/"
+config_folders=($HOME/git/peervpn-configs/ $HOME/git/m2m/)
+config_files=()
+# add found configuration files to result array
+for i in "${config_folders[@]}"; do config_files=("${config_files[@]}" "$i"); done
 
 # renice started daemons to this nice level
 renice="-5"
@@ -74,6 +81,7 @@ renice () {
 # starts a tunnel daemon
 start () {
 	args="$@"
+	echo "DEBUG: start got args: $args"
 	b="$(echo "$args" | sed 's/ /_/g' | sed 's/\//_/g')"
 	c=$HOME/.peervpn.${b}.log
 	pids=("$(pgrep peervpn)")
@@ -83,15 +91,26 @@ start () {
 			bailout "Error: PeerVPN daemon for $args already running."
 		fi
 	done
-	if [[ -f $configpath/$args ]]; then
-		msg "Starting PeerVPN tunnel daemon: $args - Output will be logged to: $c"
-		sudo peervpn $configpath/"$args" >$c 2>&1 &
-		sleep 0.5
-		renice
-	else
-		msg "No PeerVPN configuration found for $args in $configpath - exiting... "
-		exit 1
-	fi
+	for dir in "${configs[@]}"; do
+		echo "Scanning configuration directory $dir for matching config files..."
+		for file in "$dir"/*; do
+			if [[ $file =~ ^.*${args}.*$ ]]; then
+				msg "Match: $file  matches query, starting daemon..."
+				echo "$file"
+				msg "Starting PeerVPN tunnel daemon: $args - Output will be logged to: $c"
+				echo "Starting PeerVPN tunnel with configuration $file at $(date) ..." > $c
+				sudo peervpn "$file" >"$c" 2>&1 &
+				sleep 0.5
+				echo "Listing running PeerVPN instances matching $args: "
+				ps auxwww | grep -i peervpn | grep -v grep | grep -E "^.*${args}.*$" | xargs
+				echo "renice should be executed here. please implement me."
+				exit 0
+			else
+				exit 1
+			fi
+			msg "No PeerVPN configuration found for $args in ${configs[@]} - exiting... "
+		done
+	done
 }
 
 # stops a tunnel daemon
@@ -147,9 +166,9 @@ list () {
 }
 
 listconfigs () {
-	msg "PeerVPN configurations in $configpath: "
+	msg "List of PeerVPN configurations (Directories: ${config_folders[@]}): "
 	line
-	for i in $configpath/*; do
+	for i in $config_files; do
 		# TODO: use parameter expansion
 		j="$(echo "$i" | rev | cut -d"/" -f 1 | rev)"
 		n="$(grep -i '^networkname' $i | cut -d" " -f 2-)"
@@ -189,16 +208,11 @@ case "$1" in
 		if [[ "$EDITOR" != "" ]]; then
   		msg "Launching $EDITOR to edit PeerVPN configuration file $@"
 			sleep 1
-			$EDITOR "$configpath"/"$@"
+			$EDITOR "$@"
 		else
   		msg "\$EDITOR unset - Launching vi to edit PeerVPN configuration file $@"
 			sleep 1
-			vi "$configpath"/"$@"
-		fi
-		cd "$configpath"
-		if [[ -d ".git" ]]; then
-			msg "[git] Changes detected, auto-committing ... "
-  		git commit -a -m"Auto-committing changes: $@"
+			vi "$@"
 		fi
 	;;
   "")
