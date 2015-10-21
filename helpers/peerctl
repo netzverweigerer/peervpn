@@ -215,16 +215,23 @@ listconfigs () {
 ipv4 () {
 	shift
 	args="$@"
+	args_array=("$args")
+	if [[ ! "${#args_array[@]}" -gt 0 ]]; then msg "Error: ipv4: argument required."; exit 1; fi
 	for configfile in "${config_files[@]}"; do
 		if [[ "$configfile" =~ ^.*${args}.*$ ]]; then
 			msg "IPv4 configuration for ${configfile##*/}"
 			a="$(grep '^ifconfig4' "$configfile" | xargs)"
 			echo "${a##*\ }" | grep -E --color=always '/.*$'
+			exit 0
 		fi
 	done
+	msg "No matching configuration file found."
+	exit 4
 }
 
 ipv6 () {
+	args=("$@")
+	if [[ ! "${#args[@]}" -gt 0 ]]; then msg "Error: ipv6: argument required."; exit 1; fi
 	shift
 	args=("$@")
 	if [[ "${#args[@]}" -gt 1 ]]; then
@@ -235,10 +242,12 @@ ipv6 () {
 			msg "IPv6 configuration for ${configfile##*/}"
 			a="$(grep '^ifconfig6' "$configfile" | xargs)"
 			echo "${a##*\ }" | grep -E --color=always '/.*$'
+			exit 0
 		fi
 	done
+	msg "No matching configuration file found."
+	exit 6
 }
-
 
 editconfig () {
   filename="$@"
