@@ -185,9 +185,9 @@ killdaemon () {
 
 # lists peervpn tunnels
 list () {
-	pids=("$(pgrep peervpn)")
+	line
+	pids=($(pgrep peervpn | xargs))
 	if [[ ! "${#pids[@]}" -gt 0 ]]; then msg "No PeerVPN instances running."; exit 0; fi
-  line
   msg "Running PeerVPN daemons"
 	for pid in "${pids[@]}"; do
 		tput setaf 32
@@ -198,14 +198,14 @@ list () {
       array=($(echo $line | sed 's/\// /g'| xargs))
     filename="${array[${#array[@]} - 1]}"
     done
-	  line
   done
+	line
 	exit 0
 }
 
 listconfigs () {
-	msg "PeerVPN config folders: ${config_folders[@]}"
 	line
+	msg "PeerVPN config folders: ${config_folders[@]}"
 	for i in ${config_files[@]}; do
 		j="${i%%*/}"
 		jj="${j/\/\///}"
@@ -215,6 +215,7 @@ listconfigs () {
 }
 
 ipv4 () {
+	line
 	shift
 	args="$@"
 	args_array=("$args")
@@ -232,6 +233,7 @@ ipv4 () {
 }
 
 ipv6 () {
+	line
 	args=("$@")
 	if [[ ! "${#args[@]}" -gt 0 ]]; then msg "Error: ipv6: argument required."; exit 1; fi
 	shift
