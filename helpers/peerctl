@@ -10,18 +10,18 @@
 # if proper permissions are set.
 
 # path to your peervpn config files
-config_folders=($HOME/git/peervpn-configs/ $HOME/git/m2m/)
-
+config_folders=($HOME/git/peervpn-configs/ $HOME/git/peervpn-configs-2/)
 config_files=()
-# add found configuration files to result array
-for i in "${config_folders[@]}"/*; do
-  if [[ -f $i ]]; then
-    config_files=("${config_files[@]}" "$i")
-  fi
+for i in "${config_folders[@]}"; do
+	for i in $i/*; do
+		if [[ -f "$i" ]]; then
+			config_files=(${config_files[@]} $i)
+		fi
+	done
 done
 
 # renice started daemons to this nice level
-renice="-5"
+renice_level="-5"
 
 # define color set
 color0=0
@@ -50,7 +50,6 @@ header () {
 
 # print a message
 msg () {
-
   case "$@" in
     *Error*|*error*)
       color4=203
@@ -64,7 +63,13 @@ msg () {
 	*Starting*)
 		color4=35
 	;;
-	*Stopping*)
+	*Editing*)
+		color4=202
+	;;
+	*Filename*)
+		color4=242
+	;;
+			*Stopping*)
 		color4=161
 	;;
  	*Running*)
@@ -73,10 +78,7 @@ msg () {
  	*terminated*)
 		color4=241
 	;;
-  *peervpn*)
-		color4=244
-	;;
-    *Exiting*|*exiting*)
+	*Exiting*|*exiting*)
 		color4=130
 	;;
 	*Network*|*network*)
@@ -107,7 +109,7 @@ renice () {
 		for pid in "${pids[@]}"; do
 			tput setaf 32
 			echo -n -e "\nSetting scheduling priority for PID $pid ..."
-			sudo renice $renice $pid
+			sudo renice $renice_level $pid
 			echo "done."
 			tput setaf 178
 			line
@@ -139,7 +141,6 @@ start () {
 					done
 					exit 0
 				fi
-				msg "No PeerVPN configuration found for $args in ${configs[@]} - exiting..."
 		done
 	fi
 }
@@ -148,9 +149,9 @@ start () {
 stop () {
 	args="$@"
 	if [[ "$args" == "" ]]; then echo "Error: argument required for subcommand \"stop\"."; exit 1; fi
-	msg "Stopping PeerVPN daemon [$args] (PID: $pid)"
 	pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
 	if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for $args - exiting..."; exit 1; fi
+	msg "Stopping PeerVPN daemon [$args] (PID: $pid)"
 	sudo kill $pid
 	if [[ "$?" != 0 ]]; then
 		msg "Error: Could not kill PeerVPN daemon for network $args [PID: $pid]"; exit 1
@@ -185,12 +186,12 @@ killdaemon () {
 # lists peervpn tunnels
 list () {
 	pids=("$(pgrep peervpn)")
-	if [[ ! "${pids[*]}" -gt 0 ]]; then msg "No PeerVPN instances running."; exit 0; fi
+	if [[ ! "${#pids[@]}" -gt 0 ]]; then msg "No PeerVPN instances running."; exit 0; fi
   line
   msg "Running PeerVPN daemons"
 	for pid in "${pids[@]}"; do
 		tput setaf 32
-		echo -n "PID: $pid --- "
+		echo -n "PID: $pid  "
 		tput setaf 178
 	  ps auxww | grep $pid | grep --color=always -i 'peervpn ' | grep -v grep | while read line; do
       echo "${line}" | xargs | cut -d" " -f 8- | sed 's/\/\//\//g'
@@ -203,12 +204,13 @@ list () {
 }
 
 listconfigs () {
-	msg "PeerVPN config locations: ${config_folders[@]}"
+	msg "PeerVPN config folders: ${config_folders[@]}"
 	line
-	for i in $config_files; do
-		j="${i%%*/}"; jj="${i/\/\///}"
-		n="$(grep -i '^networkname' $i | cut -d" " -f 2-)"
-		msg "$jj [Network name: $n]"
+	for i in ${config_files[@]}; do
+		j="${i%%*/}"
+		jj="${j/\/\///}"
+		n="$(grep -i '^networkname' $i | cut -d" " -f 2- | head -n 1)"
+		msg " ${jj##*/} [network: $n] "
 	done
 }
 
