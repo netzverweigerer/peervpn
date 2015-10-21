@@ -9,10 +9,9 @@
 # apart from the fact that your configuration file will get self-executable
 # if proper permissions are set.
 
-# TODO: re-implement auto-git-commit for changed configuration files
-
 # path to your peervpn config files
 config_folders=($HOME/git/peervpn-configs/ $HOME/git/m2m/)
+
 config_files=()
 # add found configuration files to result array
 for i in "${config_folders[@]}"/*; do
@@ -51,11 +50,40 @@ header () {
 
 # print a message
 msg () {
+
   case "$@" in
     *Error*|*error*)
       color4=203
     ;;
-  esac
+		*List*)
+			color4=243
+		;;
+	*Usage*)
+		color4=107
+	;;
+	*Starting*)
+		color4=35
+	;;
+	*Stopping*)
+		color4=161
+	;;
+ 	*Running*)
+		color4=166
+	;;
+ 	*terminated*)
+		color4=241
+	;;
+  *peervpn*)
+		color4=244
+	;;
+    *Exiting*|*exiting*)
+		color4=130
+	;;
+	*Network*|*network*)
+		color4=63
+	;;
+esac
+
   tput setaf "$color3"
   echo -n "["
   tput setaf "$color4"
@@ -89,16 +117,14 @@ renice () {
 
 # starts a tunnel daemon
 start () {
-	args="$@"
-  echo "Starting PeerVPN daemon for network: $args"
+	args="$1"
+	if [[ "$args" == "" ]]; then msg "Error: argument required."; exit 1; fi
 	b="$(echo "$args" | sed 's/ /_/g' | sed 's/\//_/g')"
 	c=$HOME/.peervpn.${b}.log
 	n="$(ps auxwww | grep peervpn | grep "$args" | grep -v grep | grep -v peerctl | wc -l | xargs)"
 	if [[ "$n" -gt 0 ]]; then
-		msg "Error: PeerVPN daemon for $args already running:"
-		msg "(Showing output of: ps auxwww | grep peervpn | grep "$args" | grep -v grep | grep -v peerctl)"
-		ps auxwww | grep peervpn | grep "$args" | grep -v grep | grep -v peerctl
-		exit 1
+		msg "Error: PeerVPN daemon for $args already running."
+		exit 255
 	else
 		for file in "${config_files[@]}"; do
 				if [[ $file =~ ^.*${args}.*$ ]]; then
@@ -107,9 +133,10 @@ start () {
 					echo "Starting PeerVPN tunnel with configuration $file at $(date) ..." > $c
 					sudo peervpn "$file" >"$c" 2>&1 &
 					sleep 0.5
-					echo "Listing running PeerVPN instances: "
-					ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl
-					echo "HINT: renice should be executed here. please implement me."
+					msg "Running PeerVPN instances"
+					ps auxwww | grep -i peervpn | grep -v grep | grep -v sudo | grep -v peerctl | grep ${args} | while read line; do
+						msg "$(echo $line | xargs)"
+					done
 					exit 0
 				fi
 				msg "No PeerVPN configuration found for $args in ${configs[@]} - exiting..."
@@ -121,12 +148,15 @@ start () {
 stop () {
 	args="$@"
 	if [[ "$args" == "" ]]; then echo "Error: argument required for subcommand \"stop\"."; exit 1; fi
-	msg "Stopping PeerVPN daemon [$args] ..."
+	msg "Stopping PeerVPN daemon [$args] (PID: $pid)"
 	pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
 	if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for $args - exiting..."; exit 1; fi
-	msg "[$pid]"
-	sudo kill $pid && exit 0
-	msg "Error: Could not kill PeerVPN daemon for network $args [PID: $pid]"; exit 1
+	sudo kill $pid
+	if [[ "$?" != 0 ]]; then
+		msg "Error: Could not kill PeerVPN daemon for network $args [PID: $pid]"; exit 1
+	else
+		msg "Successfully terminated."
+	fi
 }
 
 # checks if a specified argument is actually a peervpn config file
@@ -173,13 +203,12 @@ list () {
 }
 
 listconfigs () {
-	msg "List of PeerVPN configurations in configuration directories: ${config_folders[@]}: "
+	msg "PeerVPN config locations: ${config_folders[@]}"
 	line
 	for i in $config_files; do
-		# TODO: use parameter expansion
-		j="$(echo "$i" | rev | cut -d"/" -f 1 | rev)"
+		j="${i%%*/}"; jj="${i/\/\///}"
 		n="$(grep -i '^networkname' $i | cut -d" " -f 2-)"
-		msg "$j [$n]"
+		msg "$jj [Network name: $n]"
 	done
 }
 
@@ -286,12 +315,13 @@ case "$1" in
 			exit 1
 		fi
 	;;
-  ""|help)
+  help)
   	usage
 		exit 0
 	;;
-   *)
+   *|'')
     args="$@"
+		msg "Usage error"
     usage
 		exit 1
   ;;
