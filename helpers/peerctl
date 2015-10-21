@@ -1,13 +1,10 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+# 
+# vim: ft=sh
+# 
 # peerctl - control the PeerVPN tunnel daemons (does not require systemd)
 # written by Armin Jenewein <armin@mutt.email>
 # Released under the terms of the GNU General Public License, v3+
-#
-# NOTE: peervpn config files *need* to have a first line
-# that starts with "#!" and ends with "peervpn". This has no side-effects
-# apart from the fact that your configuration file will get self-executable
-# if proper permissions are set.
 
 # path to your peervpn config files
 config_folders=($HOME/git/peervpn-configs/ $HOME/git/peervpn-configs-2/)
@@ -158,14 +155,6 @@ stop () {
 	else
 		msg "Successfully terminated."
 	fi
-}
-
-# checks if a specified argument is actually a peervpn config file
-checkconfig () {
-	configok=1
-  c="$1"
-  n="$(head -n 1 "$c" | grep -E '^#!.*peervpn$' | wc -l)"
-  if [[ "$n" -eq 0 ]]; then msg "Warning: $c does not look like a PeerVPN configuration file."; configok=0; fi
 }
 
 # force-kills a peervpn daemon
