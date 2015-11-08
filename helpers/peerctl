@@ -12,7 +12,9 @@ config_files=()
 for i in "${config_folders[@]}"; do
 	for i in $i/*; do
 		if [[ -f "$i" ]]; then
+			if grep '^initpeers' "$i" >/dev/null 2>&1; then
 			config_files=(${config_files[@]} $i)
+			fi
 		fi
 	done
 done
@@ -199,7 +201,7 @@ listconfigs () {
 		j="${i%%*/}"
 		jj="${j/\/\///}"
 		n="$(grep -i '^networkname' $i | cut -d" " -f 2- | head -n 1)"
-		msg " ${jj##*/} [network: $n] "
+		msg " ${jj##*/}  (network: $n) "
 	done
 }
 
