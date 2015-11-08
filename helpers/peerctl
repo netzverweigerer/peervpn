@@ -10,13 +10,13 @@
 config_folders=($HOME/git/peervpn-configs/ $HOME/git/peervpn-configs-2/)
 config_files=()
 for i in "${config_folders[@]}"; do
-	for i in $i/*; do
-		if [[ -f "$i" ]]; then
-			if grep '^initpeers' "$i" >/dev/null 2>&1; then
-			config_files=(${config_files[@]} $i)
-			fi
-		fi
-	done
+  for i in $i/*; do
+    if [[ -f "$i" ]]; then
+      if grep '^initpeers' "$i" >/dev/null 2>&1; then
+        config_files=(${config_files[@]} $i)
+      fi
+    fi
+  done
 done
 
 # renice started daemons to this nice level
@@ -31,20 +31,20 @@ color4=142
 
 # print a separator line
 line () {
-	tput setaf $color0
-	seq 1 $(tput cols) | while read line; do printf '—'; done
-	tput setaf $color1
+  tput setaf $color0
+  seq 1 $(tput cols) | while read line; do printf '—'; done
+  tput setaf $color1
 }
 
 # print header
 header () {
-	tput setaf "$color3"
+  tput setaf "$color3"
   echo -n "["
-	tput setaf "$color2"
-	echo -n "peerctl"
-	tput setaf "$color3"
-	echo "] "
-	tput setaf "$color1"
+  tput setaf "$color2"
+  echo -n "peerctl"
+  tput setaf "$color3"
+  echo "] "
+  tput setaf "$color1"
 }
 
 # print a message
@@ -53,45 +53,45 @@ msg () {
     *Error*|*error*)
       color4=203
     ;;
-		*List*)
-			color4=243
-		;;
-	*Usage*)
-		color4=107
-	;;
-	*Starting*)
-		color4=35
-	;;
-	*Editing*)
-		color4=202
-	;;
-	*Filename*)
-		color4=242
-	;;
-			*Stopping*)
-		color4=161
-	;;
- 	*Running*)
-		color4=166
-	;;
- 	*terminated*)
-		color4=241
-	;;
-	*Exiting*|*exiting*)
-		color4=130
-	;;
-	*Network*|*network*)
-		color4=63
-	;;
-esac
+    *List*)
+      color4=243
+    ;;
+  *Usage*)
+    color4=107
+  ;;
+  *Starting*)
+    color4=35
+  ;;
+  *Editing*)
+    color4=202
+  ;;
+  *Filename*)
+    color4=242
+  ;;
+      *Stopping*)
+    color4=161
+  ;;
+  *Running*)
+    color4=166
+  ;;
+  *terminated*)
+    color4=241
+  ;;
+  *Exiting*|*exiting*)
+    color4=130
+  ;;
+  *Network*|*network*)
+    color4=63
+  ;;
+  esac
 
-  tput setaf "$color3"
-  echo -n "["
-  tput setaf "$color4"
-  echo -n "$@"
-  tput setaf "$color3"
-  echo "]"
-  tput setaf "$color1"
+tput setaf "$color3"
+echo -n "["
+tput setaf "$color4"
+echo -n "$@"
+tput setaf "$color3"
+echo "]"
+tput setaf "$color1"
 }
 
 # show usage information
@@ -101,155 +101,155 @@ usage () {
 }
 
 renice () {
-	pids=("$(pgrep peervpn)")
-	if [[ "${#pids[@]}" -gt 0 ]]; then
-		msg "Setting nice-level of peervpn processes ..."
-		line
-		for pid in "${pids[@]}"; do
-			tput setaf 32
-			echo -n -e "\nSetting scheduling priority for PID $pid ..."
-			sudo renice $renice_level $pid
-			echo "done."
-			tput setaf 178
-			line
-		done
-	fi
+  pids=("$(pgrep peervpn)")
+  if [[ "${#pids[@]}" -gt 0 ]]; then
+    msg "Setting nice-level of peervpn processes ..."
+    line
+    for pid in "${pids[@]}"; do
+      tput setaf 32
+      echo -n -e "\nSetting scheduling priority for PID $pid ..."
+      sudo renice $renice_level $pid
+      echo "done."
+      tput setaf 178
+      line
+    done
+  fi
 }
 
 # starts a tunnel daemon
 start () {
-	args="$1"
-	if [[ "$args" == "" ]]; then msg "Error: argument required."; exit 1; fi
-	b="$(echo "$args" | sed 's/ /_/g' | sed 's/\//_/g')"
-	c=$HOME/.peervpn.${b}.log
-	n="$(ps auxwww | grep peervpn | grep "$args" | grep -v grep | grep -v peerctl | wc -l | xargs)"
-	if [[ "$n" -gt 0 ]]; then
-		msg "Error: PeerVPN daemon for $args already running."
-		exit 255
-	else
-		for file in "${config_files[@]}"; do
-				if [[ $file =~ ^.*${args}.*$ ]]; then
-					msg "Match: $file  matches query, starting daemon..."
-					msg "Starting PeerVPN tunnel daemon: $args - Log output will be written to: $c"
-					echo "Starting PeerVPN tunnel with configuration $file at $(date) ..." > $c
-					sudo peervpn "$file" >"$c" 2>&1 &
-					sleep 0.5
-					msg "Running PeerVPN instances"
-					ps auxwww | grep -i peervpn | grep -v grep | grep -v sudo | grep -v peerctl | grep ${args} | while read line; do
-						msg "$(echo $line | xargs)"
-					done
-					exit 0
-				fi
-		done
-	fi
+  args="$1"
+  if [[ "$args" == "" ]]; then msg "Error: argument required."; exit 1; fi
+  b="$(echo "$args" | sed 's/ /_/g' | sed 's/\//_/g')"
+  c=$HOME/.peervpn.${b}.log
+  n="$(ps auxwww | grep peervpn | grep "$args" | grep -v grep | grep -v peerctl | wc -l | xargs)"
+  if [[ "$n" -gt 0 ]]; then
+    msg "Error: PeerVPN daemon for $args already running."
+    exit 255
+  else
+    for file in "${config_files[@]}"; do
+        if [[ $file =~ ^.*${args}.*$ ]]; then
+          msg "Match: $file  matches query, starting daemon..."
+          msg "Starting PeerVPN tunnel daemon: $args - Log output will be written to: $c"
+          echo "Starting PeerVPN tunnel with configuration $file at $(date) ..." > $c
+          sudo peervpn "$file" >"$c" 2>&1 &
+          sleep 0.5
+          msg "Running PeerVPN instances"
+          ps auxwww | grep -i peervpn | grep -v grep | grep -v sudo | grep -v peerctl | grep ${args} | while read line; do
+            msg "$(echo $line | xargs)"
+          done
+          exit 0
+        fi
+    done
+  fi
 }
 
 # stops a tunnel daemon
 stop () {
-	args="$@"
-	if [[ "$args" == "" ]]; then echo "Error: argument required for subcommand \"stop\"."; exit 1; fi
-	pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
-	if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for $args - exiting..."; exit 1; fi
-	msg "Stopping PeerVPN daemon [$args] (PID: $pid)"
-	sudo kill $pid
-	if [[ "$?" != 0 ]]; then
-		msg "Error: Could not kill PeerVPN daemon for network $args [PID: $pid]"; exit 1
-	else
-		msg "Successfully terminated."
-	fi
+  args="$@"
+  if [[ "$args" == "" ]]; then echo "Error: argument required for subcommand \"stop\"."; exit 1; fi
+  pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
+  if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for $args - exiting..."; exit 1; fi
+  msg "Stopping PeerVPN daemon [$args] (PID: $pid)"
+  sudo kill $pid
+  if [[ "$?" != 0 ]]; then
+    msg "Error: Could not kill PeerVPN daemon for network $args [PID: $pid]"; exit 1
+  else
+    msg "Successfully terminated."
+  fi
 }
 
 # force-kills a peervpn daemon
 killdaemon () {
-	shift
-	a="$@"
+  shift
+  a="$@"
   msg "Killing PeerVPN daemon [$a] ..."
-	pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
-	if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for query \"$a\" - exiting ..."; exit 1; fi
-	msg "Found PID: $pid for queried name: $a - terminating..."
-	msg "Terminating PeerVPN process with PID $pid (SIGKILL) ..."
-	sudo kill -9 $pid
-	msg "Return code (kill -9 $pid): $?"
-	exit 0
+  pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
+  if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for query \"$a\" - exiting ..."; exit 1; fi
+  msg "Found PID: $pid for queried name: $a - terminating..."
+  msg "Terminating PeerVPN process with PID $pid (SIGKILL) ..."
+  sudo kill -9 $pid
+  msg "Return code (kill -9 $pid): $?"
+  exit 0
 
 }
 
 # lists peervpn tunnels
 list () {
-	line
-	pids=($(pgrep peervpn | xargs))
-	if [[ ! "${#pids[@]}" -gt 0 ]]; then msg "No PeerVPN instances running."; exit 0; fi
+  line
+  pids=($(pgrep peervpn | xargs))
+  if [[ ! "${#pids[@]}" -gt 0 ]]; then msg "No PeerVPN instances running."; exit 0; fi
   msg "Running PeerVPN daemons"
-	for pid in "${pids[@]}"; do
-		tput setaf 32
-		echo -n "PID: $pid  "
-		tput setaf 178
-	  ps auxww | grep $pid | grep --color=always -i 'peervpn ' | grep -v grep | while read line; do
+  for pid in "${pids[@]}"; do
+    tput setaf 32
+    echo -n "PID: $pid  "
+    tput setaf 178
+    ps auxww | grep $pid | grep --color=always -i 'peervpn ' | grep -v grep | while read line; do
       echo "${line}" | xargs | cut -d" " -f 8- | sed 's/\/\//\//g'
       array=($(echo $line | sed 's/\// /g'| xargs))
     filename="${array[${#array[@]} - 1]}"
     done
   done
-	line
-	exit 0
+  line
+  exit 0
 }
 
 listconfigs () {
-	line
-	msg "PeerVPN config folders: ${config_folders[@]}"
-	for i in ${config_files[@]}; do
-		j="${i%%*/}"
-		jj="${j/\/\///}"
-		n="$(grep -i '^networkname' $i | cut -d" " -f 2- | head -n 1)"
-		msg " ${jj##*/}  (network: $n) "
-	done
+  line
+  msg "PeerVPN config folders: ${config_folders[@]}"
+  for i in ${config_files[@]}; do
+    j="${i%%*/}"
+    jj="${j/\/\///}"
+    n="$(grep -i '^networkname' $i | cut -d" " -f 2- | head -n 1)"
+    msg " ${jj##*/}  (network: $n) "
+  done
 }
 
 ipv4 () {
-	line
-	shift
-	args="$@"
-	args_array=("$args")
-	if [[ ! "${#args_array[@]}" -gt 0 ]]; then msg "Error: ipv4: argument required."; exit 1; fi
-	for configfile in "${config_files[@]}"; do
-		if [[ "$configfile" =~ ^.*${args}.*$ ]]; then
-			msg "IPv4 configuration for ${configfile##*/}"
-			a="$(grep '^ifconfig4' "$configfile" | xargs)"
-			echo "${a##*\ }" | grep -E --color=always '/.*$'
-			exit 0
-		fi
-	done
-	msg "No matching configuration file found."
-	exit 4
+  line
+  shift
+  args="$@"
+  args_array=("$args")
+  if [[ ! "${#args_array[@]}" -gt 0 ]]; then msg "Error: ipv4: argument required."; exit 1; fi
+  for configfile in "${config_files[@]}"; do
+    if [[ "$configfile" =~ ^.*${args}.*$ ]]; then
+      msg "IPv4 configuration for ${configfile##*/}"
+      a="$(grep '^ifconfig4' "$configfile" | xargs)"
+      echo "${a##*\ }" | grep -E --color=always '/.*$'
+      exit 0
+    fi
+  done
+  msg "No matching configuration file found."
+  exit 4
 }
 
 ipv6 () {
-	line
-	args=("$@")
-	if [[ ! "${#args[@]}" -gt 0 ]]; then msg "Error: ipv6: argument required."; exit 1; fi
-	shift
-	args=("$@")
-	if [[ "${#args[@]}" -gt 1 ]]; then
-		echo "oh, you want to edit your config? use the editconfig option."
-	fi
-	for configfile in "${config_files[@]}"; do
-		if [[ "$configfile" =~ ^.*${args}.*$ ]]; then
-			msg "IPv6 configuration for ${configfile##*/}"
-			a="$(grep '^ifconfig6' "$configfile" | xargs)"
-			echo "${a##*\ }" | grep -E --color=always '/.*$'
-			exit 0
-		fi
-	done
-	msg "No matching configuration file found."
-	exit 6
+  line
+  args=("$@")
+  if [[ ! "${#args[@]}" -gt 0 ]]; then msg "Error: ipv6: argument required."; exit 1; fi
+  shift
+  args=("$@")
+  if [[ "${#args[@]}" -gt 1 ]]; then
+    echo "oh, you want to edit your config? use the editconfig option."
+  fi
+  for configfile in "${config_files[@]}"; do
+    if [[ "$configfile" =~ ^.*${args}.*$ ]]; then
+      msg "IPv6 configuration for ${configfile##*/}"
+      a="$(grep '^ifconfig6' "$configfile" | xargs)"
+      echo "${a##*\ }" | grep -E --color=always '/.*$'
+      exit 0
+    fi
+  done
+  msg "No matching configuration file found."
+  exit 6
 }
 
 editconfig () {
   filename="$@"
   if [[ "$EDITOR" != "" ]]; then
-		msg "Editing PeerVPN configuration file for network ${filename##*/}"
-		msg "Filename: $filename"
-		sleep 2
+    msg "Editing PeerVPN configuration file for network ${filename##*/}"
+    msg "Filename: $filename"
+    sleep 2
     $EDITOR "$filename"
   else
     vi "$filename"
@@ -283,50 +283,50 @@ case "$1" in
     listconfigs
     exit 0
   ;;
-	ipv4)
-		ipv4 "$@"
-	;;
-	ipv6)
-		ipv6 "$@"
-	;;
+  ipv4)
+    ipv4 "$@"
+  ;;
+  ipv6)
+    ipv6 "$@"
+  ;;
   editconfig)
-		shift
+    shift
     args="$@"
-		if [[ "$EDITOR" != "" ]]; then
-  		msg "Launching $EDITOR to edit PeerVPN configuration file for network $args"
+    if [[ "$EDITOR" != "" ]]; then
+      msg "Launching $EDITOR to edit PeerVPN configuration file for network $args"
       for file in "${config_files[@]}"; do
         if [[ $file =~ ^.*${args}.*$ ]]; then
           editconfig "$file"
         fi
       done
-			sleep 1
-		else
-  		msg "\$EDITOR unset - please define standard editor using shell variable."
-			sleep 1
-			vi "$@"
-		fi
-	;;
-	log)
-		shift
+      sleep 1
+    else
+      msg "\$EDITOR unset - please define standard editor using shell variable."
+      sleep 1
+      vi "$@"
+    fi
+  ;;
+  log)
+    shift
     args="$@"
-		if [[ -f $HOME/.peervpn.${args}.log ]]; then
-			msg "Displaying Log file of PeerVPN daemon $args"
-			msg "Hit Ctrl-C to quit..."
-			sleep 2
-			tail -f -1000 "$HOME/.peervpn.${args}.log"
-		else
-			msg "Error: no log-file found for $args"
-			exit 1
-		fi
-	;;
+    if [[ -f $HOME/.peervpn.${args}.log ]]; then
+      msg "Displaying Log file of PeerVPN daemon $args"
+      msg "Hit Ctrl-C to quit..."
+      sleep 2
+      tail -f -1000 "$HOME/.peervpn.${args}.log"
+    else
+      msg "Error: no log-file found for $args"
+      exit 1
+    fi
+  ;;
   help)
-  	usage
-		exit 0
-	;;
+    usage
+    exit 0
+  ;;
    *|'')
     args="$@"
-		msg "Usage error"
+    msg "Usage error"
     usage
-		exit 1
+    exit 1
   ;;
 esac
