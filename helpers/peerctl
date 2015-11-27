@@ -108,7 +108,7 @@ renice () {
     for pid in "${pids[@]}"; do
       tput setaf 32
       echo -n -e "\nSetting scheduling priority for PID $pid ..."
-      sudo renice $renice_level $pid
+      renice $renice_level $pid
       echo "done."
       tput setaf 178
       line
@@ -132,7 +132,7 @@ start () {
           msg "Match: $file  matches query, starting daemon..."
           msg "Starting PeerVPN tunnel daemon: $args - Log output will be written to: $c"
           echo "Starting PeerVPN tunnel with configuration $file at $(date) ..." > $c
-          sudo peervpn "$file" >"$c" 2>&1 &
+          peervpn "$file" >"$c" 2>&1 &
           sleep 0.5
           msg "Running PeerVPN instances"
           ps auxwww | grep -i peervpn | grep -v grep | grep -v sudo | grep -v peerctl | grep ${args} | while read line; do
@@ -151,7 +151,7 @@ stop () {
   pid="$(ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep -E "^.*${args}.*$" | xargs | cut -d" " -f 2)"
   if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for $args - exiting..."; exit 1; fi
   msg "Stopping PeerVPN daemon [$args] (PID: $pid)"
-  sudo kill $pid
+  kill $pid
   if [[ "$?" != 0 ]]; then
     msg "Error: Could not kill PeerVPN daemon for network $args [PID: $pid]"; exit 1
   else
@@ -168,7 +168,7 @@ killdaemon () {
   if [[ "$pid" == "" ]]; then msg "No running PeerVPN daemon found for query \"$a\" - exiting ..."; exit 1; fi
   msg "Found PID: $pid for queried name: $a - terminating..."
   msg "Terminating PeerVPN process with PID $pid (SIGKILL) ..."
-  sudo kill -9 $pid
+  kill -9 $pid
   msg "Return code (kill -9 $pid): $?"
   exit 0
 
@@ -255,6 +255,11 @@ editconfig () {
     vi "$filename"
   fi
 }
+
+if [[ "$UID" != 0 ]]; then
+  msg "Error: $0 needs super-user privileges. Exiting."
+  exit 1
+fi
 
 # show header on startup
 header
