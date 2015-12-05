@@ -135,7 +135,7 @@ start () {
           peervpn "$file" >"$c" 2>&1 &
           sleep 0.5
           msg "Running PeerVPN instances"
-          ps auxwww | grep -i peervpn | grep -v grep | grep -v sudo | grep -v peerctl | grep ${args} | while read line; do
+          ps auxwww | grep -i peervpn | grep -v grep | grep -v peerctl | grep ${args} | while read line; do
             msg "$(echo $line | xargs)"
           done
           exit 0
@@ -188,6 +188,7 @@ list () {
       echo "${line}" | xargs | cut -d" " -f 8- | sed 's/\/\//\//g'
       array=($(echo $line | sed 's/\// /g'| xargs))
     filename="${array[${#array[@]} - 1]}"
+    echo "Config Filename: $filename"
     done
   done
   line
