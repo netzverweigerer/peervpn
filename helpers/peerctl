@@ -10,13 +10,17 @@
 config_folders=($HOME/git/peervpn-configs/ $HOME/git/peervpn-configs-2/)
 config_files=()
 for i in "${config_folders[@]}"; do
-  for i in $i/*; do
-    if [[ -f "$i" ]]; then
-      if grep '^initpeers' "$i" >/dev/null 2>&1; then
-        config_files=(${config_files[@]} $i)
+  if [[ -d "$i" ]]; then
+    for i in $i/*; do
+      if [[ -f "$i" ]]; then
+        if grep '^initpeers' "$i" >/dev/null 2>&1; then
+          config_files=(${config_files[@]} $i)
+        fi
       fi
-    fi
-  done
+    done
+  else
+    echo "Error: config directory $i does not exist."
+  fi
 done
 
 # renice started daemons to this nice level
@@ -31,20 +35,28 @@ color4=142
 
 # print a separator line
 line () {
-  tput setaf $color0
-  seq 1 $(tput cols) | while read line; do printf '—'; done
-  tput setaf $color1
+  if [[ "$TERM" != linux && "$TERM" != dumb ]]; then
+    tput setaf $color0
+    seq 1 $(tput cols) | while read line; do printf '—'; done
+    tput setaf $color1
+  else
+    echo
+  fi
 }
 
 # print header
 header () {
-  tput setaf "$color3"
-  echo -n "["
-  tput setaf "$color2"
-  echo -n "peerctl"
-  tput setaf "$color3"
-  echo "] "
-  tput setaf "$color1"
+  if [[ "$TERM" != linux && "$TERM" != dumb ]]; then
+    tput setaf "$color3"
+    echo -n "["
+    tput setaf "$color2"
+    echo -n "peerctl"
+    tput setaf "$color3"
+    echo "] "
+    tput setaf "$color1"
+  else
+    echo "[peerctl] "
+  fi
 }
 
 # print a message
@@ -85,13 +97,17 @@ msg () {
   ;;
   esac
 
-tput setaf "$color3"
-echo -n "["
-tput setaf "$color4"
-echo -n "$@"
-tput setaf "$color3"
-echo "]"
-tput setaf "$color1"
+if [[ "$TERM" != linux && "$TERM" != dumb ]]; then
+  tput setaf "$color3"
+  echo -n "["
+  tput setaf "$color4"
+  echo -n "$@"
+  tput setaf "$color3"
+  echo "]"
+  tput setaf "$color1"
+else
+  echo "$@"
+fi
 }
 
 # show usage information
@@ -198,6 +214,7 @@ list () {
 listconfigs () {
   line
   msg "PeerVPN config folders: ${config_folders[@]}"
+  msg "PeerVPN configurations:"
   for i in ${config_files[@]}; do
     j="${i%%*/}"
     jj="${j/\/\///}"
