@@ -7,7 +7,7 @@
 # Released under the terms of the GNU General Public License, v3+
 
 # path to your peervpn config files
-config_folders=($HOME/git/peervpn-configs/ $HOME/git/peervpn-configs-2/)
+config_folders=($HOME/.peervpn /etc/peervpn /usr/local/etc/peervpn)
 config_files=()
 for i in "${config_folders[@]}"; do
   if [[ -d "$i" ]]; then
@@ -19,7 +19,7 @@ for i in "${config_folders[@]}"; do
       fi
     done
   else
-    echo "Error: config directory $i does not exist."
+    echo "[peerctl] Error: config directory $i does not exist."
   fi
 done
 
@@ -36,9 +36,7 @@ color4=142
 # print a separator line
 line () {
   if [[ "$TERM" != linux && "$TERM" != dumb ]]; then
-    tput setaf $color0
     seq 1 $(tput cols) | while read line; do printf '—'; done
-    tput setaf $color1
   else
     echo
   fi
@@ -46,17 +44,7 @@ line () {
 
 # print header
 header () {
-  if [[ "$TERM" != linux && "$TERM" != dumb ]]; then
-    tput setaf "$color3"
-    echo -n "["
-    tput setaf "$color2"
-    echo -n "peerctl"
-    tput setaf "$color3"
-    echo "] "
-    tput setaf "$color1"
-  else
     echo "[peerctl] "
-  fi
 }
 
 # print a message
@@ -98,13 +86,9 @@ msg () {
   esac
 
 if [[ "$TERM" != linux && "$TERM" != dumb ]]; then
-  tput setaf "$color3"
   echo -n "["
-  tput setaf "$color4"
   echo -n "$@"
-  tput setaf "$color3"
   echo "]"
-  tput setaf "$color1"
 else
   echo "$@"
 fi
@@ -122,11 +106,9 @@ renice () {
     msg "Setting nice-level of peervpn processes ..."
     line
     for pid in "${pids[@]}"; do
-      tput setaf 32
       echo -n -e "\nSetting scheduling priority for PID $pid ..."
       renice $renice_level $pid
       echo "done."
-      tput setaf 178
       line
     done
   fi
@@ -197,9 +179,7 @@ list () {
   if [[ ! "${#pids[@]}" -gt 0 ]]; then msg "No PeerVPN instances running."; exit 0; fi
   msg "Running PeerVPN daemons"
   for pid in "${pids[@]}"; do
-    tput setaf 32
     echo -n "PID: $pid  "
-    tput setaf 178
     ps auxww | grep $pid | grep --color=always -i 'peervpn ' | grep -v grep | while read line; do
       echo "${line}" | xargs | cut -d" " -f 8- | sed 's/\/\//\//g'
       array=($(echo $line | sed 's/\// /g'| xargs))
