@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
 	setbuf(stdout,NULL);
 	printf("PeerVPN v%d.%03d ", PEERVPN_VERSION_MAJOR, PEERVPN_VERSION_MINOR);
-	printf("- Copyright (c) 2016 Tobias Volk <mail@tobiasvolk.de>\n");
+	printf("- Copyright (c) 2016 Tobias Volk <mail@tobiasvolk.de> (armin mods)\n");
 	printf("\n");
 
 	confok = 0;
