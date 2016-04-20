@@ -7,7 +7,7 @@
 # Released under the terms of the GNU General Public License, v3+
 
 # path to your peervpn config files
-config_folders=($HOME/git/peervpn-configs/ $HOME/git/peervpn-configs-2/)
+config_folders=(/etc/peervpn /usr/local/etc/peervpn $HOME/.peervpn/)
 
 config_files=()
 for i in "${config_folders[@]}"; do
