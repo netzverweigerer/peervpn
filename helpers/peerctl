@@ -8,6 +8,7 @@
 
 # path to your peervpn config files
 config_folders=($HOME/git/peervpn-configs/ $HOME/git/peervpn-configs-2/)
+
 config_files=()
 for i in "${config_folders[@]}"; do
   if [[ -d "$i" ]]; then
